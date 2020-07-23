@@ -9,18 +9,13 @@
     "/abi",
     "/build",
     "/contracts",
-    "/scripts",
-    "/test",
-    "/truffle-config.js"
+    "/scripts"
   ],
   "scripts": {
     "test": "TRUFFLE_TEST=true npm run ganache-cli:test",
-    "test:gas": "GAS_REPORTER=true npm test",
-    "test:gas:ci": "npm run test:gas && npx codechecks",
     "lint": "solium --dir ./contracts",
     "coverage": "SOLIDITY_COVERAGE=true npm run ganache-cli:test",
-    "console": "truffle dev",
-    "ganache-cli:test": "./node_modules/@aragon/os/scripts/ganache-cli.sh",
+    "ganache-cli:test": "./node_modules/@aragon/contract-helpers-test/scripts/ganache-cli.sh",
     "deploy:devnet:ens": "truffle compile && truffle exec --network devnet scripts/deploy-beta-ens.js",
     "deploy:devnet:apm": "truffle compile && truffle exec --network devnet scripts/deploy-beta-apm.js",
     "abi:extract": "truffle-extract --output abi/ --keys abi",
@@ -30,15 +25,12 @@
     "prepublishOnly": "truffle compile --all && npm run abi:extract -- --no-compile"
   },
   "dependencies": {
-    "@aragon/os": "^4.4.0",
-    "@aragon/truffle-config-v5": "^1.0.1",
-    "mkdirp": "^0.5.1",
-    "truffle-flattener": "^1.2.9",
-    "homedir": "^0.6.0"
+    "@aragon/os": "^4.4.0"
   },
   "devDependencies": {
     "@aragon/contract-helpers-test": "^0.1.0-rc.2",
-    "@codechecks/client": "^0.1.5",
+    "@aragon/truffle-config-v5": "^1.0.1",
+    "coveralls": "^3.0.9",
     "chai": "^4.2.0",
     "eth-ens-namehash": "^2.0.8",
     "eth-gas-reporter": "^0.2.14",
