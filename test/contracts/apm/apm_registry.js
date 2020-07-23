@@ -1,7 +1,8 @@
 const { hash } = require('eth-ens-namehash')
 const { keccak_256 } = require('js-sha3')
-const { assertRevert } = require('@aragon/os/test/helpers/assertThrow')
-const { getEventArgument } = require('@aragon/os/test/helpers/events')
+
+const { assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { EMPTY_BYTES, ZERO_ADDRESS, getEventArgument } = require('@aragon/contract-helpers-test')
 
 const ENS = artifacts.require('ENS')
 const ENSFactory = artifacts.require('ENSFactory')
@@ -16,9 +17,6 @@ const ENSSubdomainRegistrar = artifacts.require('ENSSubdomainRegistrar')
 const Repo = artifacts.require('Repo')
 const APMRegistryFactory = artifacts.require('APMRegistryFactory')
 const APMRegistryFactoryMock = artifacts.require('APMRegistryFactoryMock')
-
-const EMPTY_BYTES = '0x'
-const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
 
 contract('APMRegistry', ([ensOwner, apmOwner, repoDev, notOwner, someone]) => {
     let baseDeployed, baseAddrs, ensFactory, apmFactory, daoFactory, ens, registry, acl
@@ -35,19 +33,19 @@ contract('APMRegistry', ([ensOwner, apmOwner, repoDev, notOwner, someone]) => {
 
         const kernelBase = await Kernel.new(true) // petrify immediately
         const aclBase = await ACL.new()
-        daoFactory = await DAOFactory.new(kernelBase.address, aclBase.address, ZERO_ADDR)
+        daoFactory = await DAOFactory.new(kernelBase.address, aclBase.address, ZERO_ADDRESS)
     })
 
     beforeEach(async () => {
-        apmFactory = await APMRegistryFactory.new(daoFactory.address, ...baseAddrs, ZERO_ADDR, ensFactory.address)
-        ens = ENS.at(await apmFactory.ens())
+        apmFactory = await APMRegistryFactory.new(daoFactory.address, ...baseAddrs, ZERO_ADDRESS, ensFactory.address)
+        ens = await ENS.at(await apmFactory.ens())
 
         const receipt = await apmFactory.newAPM(hash('eth'), '0x'+keccak_256('aragonpm'), apmOwner)
         const apmAddr = getEventArgument(receipt, 'DeployAPM', 'apm')
-        registry = APMRegistry.at(apmAddr)
+        registry = await APMRegistry.at(apmAddr)
 
-        const dao = Kernel.at(await registry.kernel())
-        acl = ACL.at(await dao.acl())
+        const dao = await Kernel.at(await registry.kernel())
+        acl = await ACL.at(await dao.acl())
         const subdomainRegistrar = baseDeployed[2]
 
         // Get permission to delete names after each test case
@@ -56,19 +54,19 @@ contract('APMRegistry', ([ensOwner, apmOwner, repoDev, notOwner, someone]) => {
 
     it('inits with existing ENS deployment', async () => {
         const receipt = await ensFactory.newENS(ensOwner)
-        const ens2 = ENS.at(getEventArgument(receipt, 'DeployENS', 'ens'))
-        const newFactory = await APMRegistryFactory.new(daoFactory.address, ...baseAddrs, ens2.address, ZERO_ADDR)
+        const ens2 = await ENS.at(getEventArgument(receipt, 'DeployENS', 'ens'))
+        const newFactory = await APMRegistryFactory.new(daoFactory.address, ...baseAddrs, ens2.address, ZERO_ADDRESS)
 
         await ens2.setSubnodeOwner(hash('eth'), '0x'+keccak_256('aragonpm'), newFactory.address)
         const receipt2 = await newFactory.newAPM(hash('eth'), '0x'+keccak_256('aragonpm'), apmOwner)
         const apmAddr = getEventArgument(receipt2, 'DeployAPM', 'apm')
-        const resolver = PublicResolver.at(await ens2.resolver(rootNode))
+        const resolver = await PublicResolver.at(await ens2.resolver(rootNode))
 
         assert.equal(await resolver.addr(rootNode), apmAddr, 'rootnode should be resolve')
     })
 
     it('aragonpm.eth should resolve to registry', async () => {
-        const resolver = PublicResolver.at(await ens.resolver(rootNode))
+        const resolver = await PublicResolver.at(await ens.resolver(rootNode))
 
         assert.equal(await resolver.addr(rootNode), registry.address, 'rootnode should be resolve')
     })
@@ -78,20 +76,20 @@ contract('APMRegistry', ([ensOwner, apmOwner, repoDev, notOwner, someone]) => {
     })
 
     it('can create repo with version and dev can create new versions', async () => {
-        const receipt = await registry.newRepoWithVersion('test', repoDev, [1, 0, 0], ZERO_ADDR, EMPTY_BYTES, { from: apmOwner })
-        const repo = Repo.at(getEventArgument(receipt, 'NewRepo', 'repo'))
+        const receipt = await registry.newRepoWithVersion('test', repoDev, [1, 0, 0], ZERO_ADDRESS, EMPTY_BYTES, { from: apmOwner })
+        const repo = await Repo.at(getEventArgument(receipt, 'NewRepo', 'repo'))
 
         assert.equal(await repo.getVersionsCount(), 1, 'should have created version')
 
-        await repo.newVersion([2, 0, 0], ZERO_ADDR, EMPTY_BYTES, { from: repoDev })
+        await repo.newVersion([2, 0, 0], ZERO_ADDRESS, EMPTY_BYTES, { from: repoDev })
 
         assert.equal(await repo.getVersionsCount(), 2, 'should have created version')
     })
 
     it('fails to init with existing ENS deployment if not owner of tld', async () => {
         const ensReceipt = await ensFactory.newENS(ensOwner)
-        const ens2 = ENS.at(getEventArgument(ensReceipt, 'DeployENS', 'ens'))
-        const newFactory = await APMRegistryFactory.new(daoFactory.address, ...baseAddrs, ens2.address, ZERO_ADDR)
+        const ens2 = await ENS.at(getEventArgument(ensReceipt, 'DeployENS', 'ens'))
+        const newFactory = await APMRegistryFactory.new(daoFactory.address, ...baseAddrs, ens2.address, ZERO_ADDRESS)
 
         // Factory doesn't have ownership over 'eth' tld
         await assertRevert(newFactory.newAPM(hash('eth'), '0x'+keccak_256('aragonpm'), apmOwner))
@@ -110,12 +108,12 @@ contract('APMRegistry', ([ensOwner, apmOwner, repoDev, notOwner, someone]) => {
 
         beforeEach(async () => {
             const receipt = await registry.newRepo('test', repoDev, { from: apmOwner })
-            repo = Repo.at(getEventArgument(receipt, 'NewRepo', 'repo'))
+            repo = await Repo.at(getEventArgument(receipt, 'NewRepo', 'repo'))
         })
 
         it('resolver is setup correctly', async () => {
             const resolverNode = hash('resolver.eth')
-            const publicResolver = PublicResolver.at(await ens.resolver(resolverNode))
+            const publicResolver = await PublicResolver.at(await ens.resolver(resolverNode))
 
             assert.equal(await ens.resolver(testNode), await publicResolver.addr(resolverNode), 'resolver should be set to public resolver')
             assert.equal(await publicResolver.addr(testNode), repo.address, 'resolver should resolve to repo address')
@@ -130,33 +128,33 @@ contract('APMRegistry', ([ensOwner, apmOwner, repoDev, notOwner, someone]) => {
         })
 
         it('repo dev can create versions', async () => {
-            await repo.newVersion([1, 0, 0], ZERO_ADDR, EMPTY_BYTES, { from: repoDev })
-            await repo.newVersion([2, 0, 0], ZERO_ADDR, EMPTY_BYTES, { from: repoDev })
+            await repo.newVersion([1, 0, 0], ZERO_ADDRESS, EMPTY_BYTES, { from: repoDev })
+            await repo.newVersion([2, 0, 0], ZERO_ADDRESS, EMPTY_BYTES, { from: repoDev })
 
             assert.equal(await repo.getVersionsCount(), 2, 'should have created versions')
         })
 
         it('repo dev can authorize someone to interact with repo', async () => {
-            await repo.newVersion([1, 0, 0], ZERO_ADDR, EMPTY_BYTES, { from: repoDev })
+            await repo.newVersion([1, 0, 0], ZERO_ADDRESS, EMPTY_BYTES, { from: repoDev })
             const newOwner = someone
 
             await acl.grantPermission(newOwner, repo.address, await repo.CREATE_VERSION_ROLE(), { from: repoDev })
 
-            await repo.newVersion([2, 0, 0], ZERO_ADDR, EMPTY_BYTES, { from: newOwner })
-            await repo.newVersion([2, 1, 0], ZERO_ADDR, EMPTY_BYTES, { from: repoDev }) // repoDev can still create them
+            await repo.newVersion([2, 0, 0], ZERO_ADDRESS, EMPTY_BYTES, { from: newOwner })
+            await repo.newVersion([2, 1, 0], ZERO_ADDRESS, EMPTY_BYTES, { from: repoDev }) // repoDev can still create them
 
             assert.equal(await repo.getVersionsCount(), 3, 'should have created versions')
         })
 
         it('repo dev can no longer create versions if permission is removed', async () => {
-            await repo.newVersion([1, 0, 0], ZERO_ADDR, EMPTY_BYTES, { from: repoDev })
+            await repo.newVersion([1, 0, 0], ZERO_ADDRESS, EMPTY_BYTES, { from: repoDev })
             await acl.revokePermission(repoDev, repo.address, await repo.CREATE_VERSION_ROLE(), { from: repoDev })
 
-            await assertRevert(repo.newVersion([2, 0, 0], ZERO_ADDR, EMPTY_BYTES, { from: repoDev }))
+            await assertRevert(repo.newVersion([2, 0, 0], ZERO_ADDRESS, EMPTY_BYTES, { from: repoDev }))
         })
 
         it('cannot create versions if not in ACL', async () => {
-            await assertRevert(repo.newVersion([1, 0, 0], ZERO_ADDR, EMPTY_BYTES, { from: notOwner }))
+            await assertRevert(repo.newVersion([1, 0, 0], ZERO_ADDRESS, EMPTY_BYTES, { from: notOwner }))
         })
     })
 

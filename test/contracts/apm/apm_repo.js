@@ -1,9 +1,7 @@
-const { assertRevert } = require('@aragon/os/test/helpers/assertThrow')
+const { assertRevert } = require('@aragon/contract-helpers-test/src/asserts')
+const { EMPTY_BYTES, ZERO_ADDRESS } = require('@aragon/contract-helpers-test')
 
 const Repo = artifacts.require('UnsafeRepo')
-
-const EMPTY_BYTES = '0x'
-const ZERO_ADDR = '0x0000000000000000000000000000000000000000'
 
 contract('Repo', accounts => {
     let repo
@@ -32,7 +30,7 @@ contract('Repo', accounts => {
 
     // valid version as being a correct bump from 0.0.0
     it('cannot create invalid first version', async () => {
-        await assertRevert(repo.newVersion([1, 1, 0], ZERO_ADDR, EMPTY_BYTES))
+        await assertRevert(repo.newVersion([1, 1, 0], ZERO_ADDRESS, EMPTY_BYTES))
     })
 
     context('creating initial version', () => {
@@ -44,14 +42,14 @@ contract('Repo', accounts => {
         })
 
         const assertVersion = (versionData, semanticVersion, code, contentUri) => {
-            const [[maj, min, pat], addr, content] = versionData
+            const { semanticVersion: [maj, min, pat], contractAddress, contentURI } = versionData
 
             assert.equal(maj, semanticVersion[0], 'major should match')
             assert.equal(min, semanticVersion[1], 'minor should match')
             assert.equal(pat, semanticVersion[2], 'patch should match')
 
-            assert.equal(addr, code, 'code should match')
-            assert.equal(content, contentUri, 'content should match')
+            assert.equal(contractAddress, code, 'code should match')
+            assert.equal(contentURI, contentUri, 'content should match')
         }
 
         it('version is fetchable as latest', async () => {
@@ -71,7 +69,7 @@ contract('Repo', accounts => {
         })
 
         it('setting contract address to 0 reuses last version address', async () => {
-            await repo.newVersion([1, 1, 0], ZERO_ADDR, initialContent)
+            await repo.newVersion([1, 1, 0], ZERO_ADDRESS, initialContent)
             assertVersion(await repo.getByVersionId(2), [1, 1, 0], initialCode, initialContent)
         })
 
