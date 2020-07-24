@@ -18,6 +18,7 @@ jobs:
       - name: test
         run: npm run test
       - name: coverage
+        continue-on-error: true
         run: npm run coverage
 env:
   CI: true
