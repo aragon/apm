@@ -20,7 +20,7 @@
     "lint": "solium --dir ./contracts",
     "coverage": "SOLIDITY_COVERAGE=true npm run ganache-cli:test",
     "console": "truffle dev",
-    "ganache-cli:test": "scripts/ganache-cli.sh",
+    "ganache-cli:test": "./node_modules/@aragon/os/scripts/ganache-cli.sh",
     "deploy:devnet:ens": "truffle compile && truffle exec --network devnet scripts/deploy-beta-ens.js",
     "deploy:devnet:apm": "truffle compile && truffle exec --network devnet scripts/deploy-beta-apm.js",
     "abi:extract": "truffle-extract --output abi/ --keys abi",

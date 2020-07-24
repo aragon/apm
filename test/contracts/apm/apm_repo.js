@@ -1,4 +1,4 @@
-const { assertRevert } = require('../../helpers/assertThrow')
+const { assertRevert } = require('@aragon/os/test/helpers/assertThrow')
 
 const Repo = artifacts.require('UnsafeRepo')
 
