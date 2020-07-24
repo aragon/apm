@@ -1,0 +1,23 @@
+name: contracts
+
+on: [push, pull_request]
+
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 10
+      - name: npm install
+        run: npm install
+      - name: lint
+        run: npm run lint
+      - name: test
+        run: npm run test
+      - name: coverage
+        run: npm run coverage
+env:
+  CI: true
