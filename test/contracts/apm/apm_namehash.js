@@ -1,4 +1,5 @@
 const { hash } = require('eth-ens-namehash')
+
 const APMNamehashMock = artifacts.require('APMNamehashMock')
 
 contract('APM Name Hash', () => {
